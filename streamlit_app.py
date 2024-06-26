@@ -7,7 +7,6 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from collections import Counter
 import pandas as pd
-import matplotlib.pyplot as plt
 
 # Download necessary NLTK data
 nltk.download('punkt')
@@ -49,10 +48,10 @@ def perform_swot_analysis(text):
     word_freq = Counter(words)
     
     # This is a simplified SWOT analysis. In a real-world scenario, you'd need more sophisticated NLP techniques.
-    strengths = [word for word in word_freq.most_common(10) if word[0] in ['innovative', 'leading', 'best', 'quality']]
-    weaknesses = [word for word in word_freq.most_common(10) if word[0] in ['challenge', 'improve', 'issue']]
-    opportunities = [word for word in word_freq.most_common(10) if word[0] in ['growth', 'expansion', 'new']]
-    threats = [word for word in word_freq.most_common(10) if word[0] in ['competitor', 'risk', 'challenge']]
+    strengths = [word for word, count in word_freq.most_common(10) if word in ['innovative', 'leading', 'best', 'quality']]
+    weaknesses = [word for word, count in word_freq.most_common(10) if word in ['challenge', 'improve', 'issue']]
+    opportunities = [word for word, count in word_freq.most_common(10) if word in ['growth', 'expansion', 'new']]
+    threats = [word for word, count in word_freq.most_common(10) if word in ['competitor', 'risk', 'challenge']]
     
     return {
         'Strengths': strengths,
@@ -62,19 +61,14 @@ def perform_swot_analysis(text):
     }
 
 def visualize_swot(swot_results):
-    fig, ax = plt.subplots(2, 2, figsize=(12, 12))
-    fig.suptitle('SWOT Analysis Results', fontsize=16)
-    
-    for i, (category, words) in enumerate(swot_results.items()):
-        row = i // 2
-        col = i % 2
-        df = pd.DataFrame(words, columns=['Word', 'Frequency'])
-        ax[row, col].bar(df['Word'], df['Frequency'])
-        ax[row, col].set_title(category)
-        ax[row, col].set_xticklabels(df['Word'], rotation=45, ha='right')
-    
-    plt.tight_layout()
-    return fig
+    for category, words in swot_results.items():
+        if words:
+            df = pd.DataFrame({'Word': words, 'Count': range(len(words), 0, -1)})
+            st.subheader(category)
+            st.bar_chart(df.set_index('Word'))
+        else:
+            st.subheader(category)
+            st.write("No words found for this category.")
 
 def main():
     if not st.session_state.logged_in:
@@ -89,12 +83,7 @@ def main():
                 swot_results = perform_swot_analysis(text)
                 
                 st.subheader("SWOT Analysis Results")
-                for category, words in swot_results.items():
-                    st.write(f"{category}:")
-                    st.write(", ".join([word for word, _ in words]))
-                
-                fig = visualize_swot(swot_results)
-                st.pyplot(fig)
+                visualize_swot(swot_results)
 
 if __name__ == "__main__":
     main()
