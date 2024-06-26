@@ -1,5 +1,4 @@
 import streamlit as st
-import bcrypt
 import requests
 from bs4 import BeautifulSoup
 import nltk
@@ -9,18 +8,16 @@ from collections import Counter
 import pandas as pd
 
 # Download necessary NLTK data
-nltk.download('punkt')
-nltk.download('stopwords')
+nltk.download('punkt', quiet=True)
+nltk.download('stopwords', quiet=True)
 
 # Initialize session state
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
 def check_password(username, password):
-    if username in st.secrets["users"]:
-        stored_password = st.secrets["users"][username]
-        return bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8'))
-    return False
+    # This is a simple, insecure way to check passwords. Do not use in production!
+    return username in st.secrets["users"] and password == st.secrets["users"][username]
 
 def login():
     st.title("Login")
@@ -34,9 +31,14 @@ def login():
             st.error("Incorrect username or password")
 
 def scrape_website(url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'html.parser')
-    return soup.get_text()
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raises an HTTPError for bad responses
+        soup = BeautifulSoup(response.content, 'html.parser')
+        return soup.get_text()
+    except requests.RequestException as e:
+        st.error(f"Error scraping website: {str(e)}")
+        return ""
 
 def preprocess_text(text):
     tokens = word_tokenize(text.lower())
@@ -78,12 +80,17 @@ def main():
         url = st.text_input("Enter company website URL:")
         
         if st.button("Perform SWOT Analysis"):
-            with st.spinner("Analyzing..."):
-                text = scrape_website(url)
-                swot_results = perform_swot_analysis(text)
-                
-                st.subheader("SWOT Analysis Results")
-                visualize_swot(swot_results)
+            if url:
+                with st.spinner("Analyzing..."):
+                    text = scrape_website(url)
+                    if text:
+                        swot_results = perform_swot_analysis(text)
+                        st.subheader("SWOT Analysis Results")
+                        visualize_swot(swot_results)
+                    else:
+                        st.error("Unable to retrieve content from the provided URL.")
+            else:
+                st.warning("Please enter a URL before performing the analysis.")
 
 if __name__ == "__main__":
     main()
